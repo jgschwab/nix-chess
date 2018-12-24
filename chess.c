@@ -53,9 +53,10 @@ int main(){
     
     paintBoard(board, pieces, tiles, pieceIcons);
     
-    char *cmd = "g1f3";
-    move(cmd, pieces, 1);
+    move("a2a4", pieces, 1);
     paintBoard(board, pieces, tiles, pieceIcons);
+    
+    
 }
 
 /* Determine, based on the type and color of piece on the square 
@@ -93,7 +94,100 @@ char toUpper(char c){
     return c;
 }
 
+/*
+ *
+ */
 void getValidMoves(int validMoves[][2], int pieces[8][8][2], short color, int i, int j){
+    int x, y, n;
+    n = 0;
+    
+    if(pieces[i][j][0] == 0){ // empty space
+        validMoves[0][0] = -1;
+    } else if(pieces[i][j][0] == 1){ // pawn
+        // pawn logic
+        if(color){ // white pawn
+            // white pawn is not on left edge or row 8
+            // and can take piece to front left             
+            if(j > 0 && i > 0 && pieces[i-1][j-1][1] != color 
+                     && pieces[i-1][j-1][0] != 0){
+                validMoves[n][0] = i-1;
+                validMoves[n++][1] = j-1;
+            }
+            // white pawn is not on right edge or row 8
+            // and can take piece to front right
+            if(j < 7 && i > 0 && pieces[i-1][j+1][1] != color 
+                     && pieces[i-1][j+1][0] != 0){
+                validMoves[n][0] = i-1;
+                validMoves[n++][1] = j+1;
+            }
+            // white pawn is not on row 8
+            // and has empty spot in front of it
+            if(i > 0 && pieces[i-1][j][0] == 0){
+                validMoves[n][0] = i-1;
+                validMoves[n++][1] = j;
+            }
+            // white pawn is on home row
+            // and has no pieces 1 or 2 tiles in front of it
+            if(i == 6 && pieces[i-1][j][0] == 0 && pieces[i-2][j][0] == 0){
+                validMoves[n][0] = i-2;
+                validMoves[n++][1] = j;
+            }
+        }else{ //black pawn
+            // black pawn is not on left edge or row 1
+            // and can take piece to front left             
+            if(j > 0 && i < 7 && pieces[i+1][j-1][1] != color 
+                     && pieces[i+1][j-1][0] != 0){
+                validMoves[n][0] = i+1;
+                validMoves[n++][1] = j-1;
+            }
+            // black pawn is not on right edge or row 1
+            // and can take piece to front right
+            if(j < 7 && i < 7 && pieces[i+1][j+1][1] != color 
+                     && pieces[i+1][j+1][0] != 0){
+                validMoves[n][0] = i+1;
+                validMoves[n++][1] = j+1;
+            }
+            // black pawn is not on row 1
+            // and has empty spot in front of it
+            if(i < 7 && pieces[i+1][j][0] == 0){
+                validMoves[n][0] = i+1;
+                validMoves[n++][1] = j;
+            }
+            // black pawn is on home row
+            // and has no pieces 1 or 2 tiles in front of it
+            if(i == 1 && pieces[i+1][j][0] == 0 && pieces[i+2][j][0] == 0){
+                validMoves[n][0] = i+2;
+                validMoves[n++][1] = j;
+            }
+        } 
+    } else if(pieces[i][j][0] == 2){ // bishop
+        //TODO bishop logic
+        ;
+    } else if(pieces[i][j][0] == 3){ // knight
+        //TODO knight logic
+        ;
+    } else if(pieces[i][j][0] == 4){ // rook
+        //TODO rook logic
+        ;
+    } else if(pieces[i][j][0] == 5){ // queen
+        //TODO queen logic
+        ;
+    } else if(pieces[i][j][0] == 6){ // king
+        // king logic
+        for(x = i - 1; x <= i + 1; x++){
+            for(y = j - 1; y <= j + 1; y++){
+                if(i < 0 || j < 0 || i > 7 || j > 7)
+                    continue;
+                if(pieces[x][y][0] == 0 || pieces[x][y][1] != color){
+                    validMoves[n][0] = x;
+                    validMoves[n++][1] = y;
+                }
+            }
+        }
+    } 
+    
+    validMoves[n][0] = -1;
+    /*
     validMoves[0][0] = 5;
     validMoves[0][1] = 7;
     
@@ -101,37 +195,61 @@ void getValidMoves(int validMoves[][2], int pieces[8][8][2], short color, int i,
     validMoves[1][1] = 5;
     
     validMoves[2][0] = -1;
+    */
 }
 
 
-/* returns -1 if move is invalid */
+/* returns negative integer if error occurs, 0 if successful
+ * Error codes:
+ * -1: No piece at start location
+ * -2: Piece not owned by player
+ * -3: End location not in piece's range
+ * -4: Invalid start location
+ * -5: Invalid end location
+ */
 int move(char moveCmd[], int pieces[8][8][2], short color){
     /* parse out initial location */
     int j = toUpper(moveCmd[0]);
     if(j == 0)
-        return -1;
+        return -4;
     j -= 65;
     int i = atoi(&moveCmd[1]);
     if(i == 0)
-        return -1;
+        return -4;
     i = 8 - i;
-    int startLoc[] = {i,j};
+    if(i < 0 || j < 0 || i > 7 || j > 7)
+        return -4;
     
     /* parse out future location */
     int y = toUpper(moveCmd[2]);
     if(y == 0)
-        return -1;
+        return -5;
     y -= 65;
     int x = atoi(&moveCmd[3]);
     if(x == 0)
-        return -1;
+        return -5;
     x = 8 - x;
-    int endLoc[] = {x,y};
+    if(x < 0 || y < 0 || x > 7 || y > 7)
+        return -5;
+    
+    /* check that a piece exists at location */
+    if(pieces[i][j][0] == 0)
+        return -1;
+        
+    /* check that piece belongs to the player */
+    if(pieces[i][j][1]  != color)
+        return -2;
     
     /* get valid moves, store them in buffer */
     int validMoves[15][2];
+    validMoves[0][0] = -1;
     getValidMoves(validMoves, pieces, color, i, j);
     int k = 0;
+    while(validMoves[k][0] != -1){
+        printf("(%d,%d)\n", validMoves[k][0], validMoves[k][1]);
+        k++;
+    }
+    k = 0;
     while(validMoves[k][0] != -1){
         if(validMoves[k][0] == x && validMoves[k][1] == y){
             /* actually move the piece in memory */
@@ -143,8 +261,10 @@ int move(char moveCmd[], int pieces[8][8][2], short color){
         }
         k++;
     }
-    return -1;
-    
+    return -3;
+    //TODO pawn replacement on back row
+    //TODO castling (keep a flag for if either color has already castled..)
+    //TODO en passant
 }
 
 
