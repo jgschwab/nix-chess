@@ -47,13 +47,15 @@ int main(){
         {{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0}},
         {{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0}},
         {{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0}},
-        {{1,1},{1,1},{1,1},{1,1},{1,1},{1,1},{1,1},{1,1}},
+        {{1,1},{1,1},{1,1},{0,1},{1,1},{1,1},{1,1},{1,1}},
         {{4,1},{3,1},{2,1},{5,1},{6,1},{2,1},{3,1},{4,1}},
     };
     
     paintBoard(board, pieces, tiles, pieceIcons);
     
-    move("a2a4", pieces, 1);
+    move("c1d2", pieces, 1);
+    paintBoard(board, pieces, tiles, pieceIcons);
+    move("d2a5", pieces, 1);
     paintBoard(board, pieces, tiles, pieceIcons);
     
     
@@ -66,10 +68,10 @@ void paintBoard(short board[8][8], int pieces[8][8][2], char *(tiles[]), char *(
     int i, j;
     
     /* Print the header */
-    printf("\e[36m   \u2554");
+    printf("\e[36m    \u2554");
     for(i = 0; i < 12; i++)
         printf("\u2550");
-    printf("\u2557\n   \u2551 *NIX Chess \u2551\n   \u255a");  
+    printf("\u2557\n    \u2551 *NIX Chess \u2551\n    \u255a");  
     for(i = 0; i < 12; i++)
         printf("\u2550");
     printf("\u255d\e[0m\n\n");
@@ -161,11 +163,28 @@ void getValidMoves(int validMoves[][2], int pieces[8][8][2], short color, int i,
             }
         } 
     } else if(pieces[i][j][0] == 2){ // bishop
-        //TODO bishop logic
-        ;
+        // bishop logic
+        int xInc, yInc;
+        for(xInc = -1; xInc <= 1; xInc += 2)
+            for(yInc = -1; yInc <= 1; yInc += 2){
+                x = i + xInc;
+                y = j + yInc;
+                while(x <= 7 && x >= 0 && y <= 7 && y >= 0
+                             && pieces[x][y][0] == 0){
+                    validMoves[n][0] = x;
+                    validMoves[n++][1] = y;
+                    x += xInc;
+                    y += yInc;
+                }
+                if(x <= 7 && x >= 0 && y <= 7 && y >= 0
+                             && pieces[x][y][1] != color){
+                    validMoves[n][0] = x;
+                    validMoves[n++][1] = y;
+                }
+            }    
     } else if(pieces[i][j][0] == 3){ // knight
         //TODO knight logic
-        ;
+        
     } else if(pieces[i][j][0] == 4){ // rook
         //TODO rook logic
         ;
@@ -187,15 +206,6 @@ void getValidMoves(int validMoves[][2], int pieces[8][8][2], short color, int i,
     } 
     
     validMoves[n][0] = -1;
-    /*
-    validMoves[0][0] = 5;
-    validMoves[0][1] = 7;
-    
-    validMoves[1][0] = 5;
-    validMoves[1][1] = 5;
-    
-    validMoves[2][0] = -1;
-    */
 }
 
 
@@ -245,10 +255,13 @@ int move(char moveCmd[], int pieces[8][8][2], short color){
     validMoves[0][0] = -1;
     getValidMoves(validMoves, pieces, color, i, j);
     int k = 0;
+    
+    /* Debugging: print out all possible spaces that the piece could have gone */
     while(validMoves[k][0] != -1){
-        printf("(%d,%d)\n", validMoves[k][0], validMoves[k][1]);
+        printf("(%c%d)\n", validMoves[k][1] + 65, 8 - validMoves[k][0]);
         k++;
     }
+    
     k = 0;
     while(validMoves[k][0] != -1){
         if(validMoves[k][0] == x && validMoves[k][1] == y){
