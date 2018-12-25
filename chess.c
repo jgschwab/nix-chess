@@ -47,26 +47,63 @@ int main(){
         {{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0}},
         {{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0}},
         {{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0}},
-        {{1,1},{1,1},{1,1},{0,1},{1,1},{1,1},{1,1},{1,1}},
+        {{1,1},{1,1},{1,1},{1,1},{1,1},{1,1},{1,1},{1,1}},
         {{4,1},{3,1},{2,1},{5,1},{6,1},{2,1},{3,1},{4,1}},
     };
     
-    paintBoard(board, pieces, tiles, pieceIcons);
+    paintBoard(1, board, pieces, tiles, pieceIcons);
     
-    move("c1d2", pieces, 1);
-    paintBoard(board, pieces, tiles, pieceIcons);
+    /* TESTING
     move("d2a5", pieces, 1);
     paintBoard(board, pieces, tiles, pieceIcons);
+    move("b1c3", pieces, 1);
+    paintBoard(board, pieces, tiles, pieceIcons);
+    move("d1d3", pieces, 1);
+    paintBoard(board, pieces, tiles, pieceIcons);
+    move("b7b6", pieces, 0);
+    paintBoard(board, pieces, tiles, pieceIcons);
+    move("b6a5", pieces, 0);
+    paintBoard(board, pieces, tiles, pieceIcons);
+    move("a5a4", pieces, 0);
+    paintBoard(board, pieces, tiles, pieceIcons);
+    move("c3a4", pieces, 1);
+    paintBoard(board, pieces, tiles, pieceIcons);
+    */
     
     
+    int turn = 1;
+    int gameOver = 0;
+    char players[2][6] = {"Black", "White"};
+    char errorMsg[5][40] = {"No piece at start location",
+                         "Piece not owned by player",
+                         "End location not in piece's range",
+                         "Invalid start location",
+                         "Invalid end location"};
+    char cmd[100];
+    int code;
+    while(!gameOver){
+        printf("%s >> ", players[turn]);
+        scanf("%s", cmd);
+        if((code = move(cmd, pieces, turn)) > 0){
+            printf("%s\n", errorMsg[code-1]);
+            continue;
+        }
+        turn = turn == 1 ? 0 : 1;
+        paintBoard(turn, board, pieces, tiles, pieceIcons);
+    }
+    
+    //TODO detect check
+    
+    //TODO detect checkmate
+    //TODO detect stalemate?
 }
 
 /* Determine, based on the type and color of piece on the square 
    and background color of square, how to paint each square */
-void paintBoard(short board[8][8], int pieces[8][8][2], char *(tiles[]), char *(pieceIcons[7][2])){
+void paintBoard(int color, short board[8][8], int pieces[8][8][2], char *(tiles[]), char *(pieceIcons[7][2])){
     
     int i, j;
-    
+    //TODO rotate board each turn
     /* Print the header */
     printf("\e[36m    \u2554");
     for(i = 0; i < 12; i++)
@@ -76,16 +113,29 @@ void paintBoard(short board[8][8], int pieces[8][8][2], char *(tiles[]), char *(
         printf("\u2550");
     printf("\u255d\e[0m\n\n");
     
-    /* Print the board */
-    for(i = 0; i < 8; i++){
-        printf(" %d ", 8 - i);
-        for(j = 0; j < 8; j++){
-            printf("\e[2m%s%s\e[0m", tiles[board[i][j]], 
-                pieceIcons[pieces[i][j][0]][pieces[i][j][1]]);
+    if(color){
+        /* Print from white's perspective */
+        for(i = 0; i < 8; i++){
+            printf(" %d ", 8 - i);
+            for(j = 0; j < 8; j++){
+                printf("\e[2m%s%s\e[0m", tiles[board[i][j]], 
+                    pieceIcons[pieces[i][j][0]][pieces[i][j][1]]);
+            }
+            printf("\n");
         }
-        printf("\n");
+        printf("   A/B/C/D/E/F/G/H/\n");
+    }else{
+        /* Print from black's perspective */
+        for(i = 7; i >= 0; i--){
+            printf(" %d ", 8 - i);
+            for(j = 7; j >= 0; j--){
+                printf("\e[2m%s%s\e[0m", tiles[board[i][j]], 
+                    pieceIcons[pieces[i][j][0]][pieces[i][j][1]]);
+            }
+            printf("\n");
+        }
+        printf("   H/G/F/E/D/C/B/A/\n");
     }
-    printf("   A/B/C/D/E/F/G/H/\n");
 }
 
 char toUpper(char c){
@@ -97,9 +147,11 @@ char toUpper(char c){
 }
 
 /*
- *
+ * Finds all valid spots to move for a given piece
+ * Stores locations in validMoves, an array of integer pairs
  */
 void getValidMoves(int validMoves[][2], int pieces[8][8][2], short color, int i, int j){
+
     int x, y, n;
     n = 0;
     
@@ -183,19 +235,75 @@ void getValidMoves(int validMoves[][2], int pieces[8][8][2], short color, int i,
                 }
             }    
     } else if(pieces[i][j][0] == 3){ // knight
-        //TODO knight logic
+        // knight logic
         
+        int xInc, yInc;
+        for(xInc = -2; xInc <= 2; xInc++)
+            for(yInc = -2; yInc <= 2; yInc++){
+                
+                if(xInc == 0 || yInc == 0 || xInc == yInc || (-1*xInc) == yInc){
+                    continue;
+                }    
+                
+                x = i + xInc;
+                y = j + yInc;
+                
+                if(x <= 7 && x >= 0 && y <= 7 && y >= 0
+                             && (pieces[x][y][0] == 0
+                             || pieces[x][y][1] != color)){
+                    validMoves[n][0] = x;
+                    validMoves[n++][1] = y;
+                }
+            }
     } else if(pieces[i][j][0] == 4){ // rook
-        //TODO rook logic
-        ;
+        // rook logic
+        int xInc, yInc;
+        for(xInc = -1; xInc <= 1; xInc += 1)
+            for(yInc = -1; yInc <= 1; yInc += 1){
+                if(!(xInc == 0 || yInc == 0) || (xInc == 0 && yInc == 0))
+                    continue;
+                x = i + xInc;
+                y = j + yInc;
+                while(x <= 7 && x >= 0 && y <= 7 && y >= 0
+                             && pieces[x][y][0] == 0){
+                    validMoves[n][0] = x;
+                    validMoves[n++][1] = y;
+                    x += xInc;
+                    y += yInc;
+                }
+                if(x <= 7 && x >= 0 && y <= 7 && y >= 0
+                             && pieces[x][y][1] != color){
+                    validMoves[n][0] = x;
+                    validMoves[n++][1] = y;
+                }
+            }
     } else if(pieces[i][j][0] == 5){ // queen
-        //TODO queen logic
-        ;
+        // queen logic
+        int xInc, yInc;
+        for(xInc = -1; xInc <= 1; xInc += 1)
+            for(yInc = -1; yInc <= 1; yInc += 1){
+                if(xInc == 0 && yInc == 0)
+                    continue;
+                x = i + xInc;
+                y = j + yInc;
+                while(x <= 7 && x >= 0 && y <= 7 && y >= 0
+                             && pieces[x][y][0] == 0){
+                    validMoves[n][0] = x;
+                    validMoves[n++][1] = y;
+                    x += xInc;
+                    y += yInc;
+                }
+                if(x <= 7 && x >= 0 && y <= 7 && y >= 0
+                             && pieces[x][y][1] != color){
+                    validMoves[n][0] = x;
+                    validMoves[n++][1] = y;
+                }
+            }
     } else if(pieces[i][j][0] == 6){ // king
         // king logic
         for(x = i - 1; x <= i + 1; x++){
             for(y = j - 1; y <= j + 1; y++){
-                if(i < 0 || j < 0 || i > 7 || j > 7)
+                if(x < 0 || y < 0 || x > 7 || y > 7)
                     continue;
                 if(pieces[x][y][0] == 0 || pieces[x][y][1] != color){
                     validMoves[n][0] = x;
@@ -209,58 +317,62 @@ void getValidMoves(int validMoves[][2], int pieces[8][8][2], short color, int i,
 }
 
 
-/* returns negative integer if error occurs, 0 if successful
+/* returns positive integer if error occurs, 0 if successful
  * Error codes:
- * -1: No piece at start location
- * -2: Piece not owned by player
- * -3: End location not in piece's range
- * -4: Invalid start location
- * -5: Invalid end location
+ * 1: No piece at start location
+ * 2: Piece not owned by player
+ * 3: End location not in piece's range
+ * 4: Invalid start location
+ * 5: Invalid end location
  */
 int move(char moveCmd[], int pieces[8][8][2], short color){
     /* parse out initial location */
     int j = toUpper(moveCmd[0]);
-    if(j == 0)
-        return -4;
+    if(j == 0){
+        return 4;
+    }
     j -= 65;
     int i = atoi(&moveCmd[1]);
-    if(i == 0)
-        return -4;
+    if(i == 0){
+        return 4;
+    }    
     i = 8 - i;
-    if(i < 0 || j < 0 || i > 7 || j > 7)
-        return -4;
+    if(i < 0 || j < 0 || i > 7 || j > 7){
+        return 4;
+    }
     
     /* parse out future location */
     int y = toUpper(moveCmd[2]);
     if(y == 0)
-        return -5;
+        return 5;
     y -= 65;
     int x = atoi(&moveCmd[3]);
     if(x == 0)
-        return -5;
+        return 5;
     x = 8 - x;
     if(x < 0 || y < 0 || x > 7 || y > 7)
-        return -5;
+        return 5;
     
     /* check that a piece exists at location */
     if(pieces[i][j][0] == 0)
-        return -1;
+        return 1;
         
     /* check that piece belongs to the player */
     if(pieces[i][j][1]  != color)
-        return -2;
+        return 2;
     
     /* get valid moves, store them in buffer */
-    int validMoves[15][2];
+    int validMoves[32][2];
     validMoves[0][0] = -1;
     getValidMoves(validMoves, pieces, color, i, j);
     int k = 0;
     
     /* Debugging: print out all possible spaces that the piece could have gone */
     while(validMoves[k][0] != -1){
-        printf("(%c%d)\n", validMoves[k][1] + 65, 8 - validMoves[k][0]);
+        printf("%c%d ", validMoves[k][1] + 65, 8 - validMoves[k][0]);
         k++;
     }
+    printf("\n");
     
     k = 0;
     while(validMoves[k][0] != -1){
@@ -274,12 +386,9 @@ int move(char moveCmd[], int pieces[8][8][2], short color){
         }
         k++;
     }
-    return -3;
+    
+    return 3;
     //TODO pawn replacement on back row
     //TODO castling (keep a flag for if either color has already castled..)
-    //TODO en passant
+    //TODO en passant?
 }
-
-
-
-
