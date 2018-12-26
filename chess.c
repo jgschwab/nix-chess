@@ -52,24 +52,6 @@ int main(){
     
     paintBoard(1, board, pieces, tiles, pieceIcons);
     
-    /* TESTING
-    move("d2a5", pieces, 1);
-    paintBoard(board, pieces, tiles, pieceIcons);
-    move("b1c3", pieces, 1);
-    paintBoard(board, pieces, tiles, pieceIcons);
-    move("d1d3", pieces, 1);
-    paintBoard(board, pieces, tiles, pieceIcons);
-    move("b7b6", pieces, 0);
-    paintBoard(board, pieces, tiles, pieceIcons);
-    move("b6a5", pieces, 0);
-    paintBoard(board, pieces, tiles, pieceIcons);
-    move("a5a4", pieces, 0);
-    paintBoard(board, pieces, tiles, pieceIcons);
-    move("c3a4", pieces, 1);
-    paintBoard(board, pieces, tiles, pieceIcons);
-    */
-    
-    
     int turn = 1;
     int gameOver = 0;
     char players[2][6] = {"Black", "White"};
@@ -79,6 +61,7 @@ int main(){
                             "Invalid start location",
                             "Invalid end location",
                             "Cannot put yourself in check"};
+    
     char cmd[100];
     int code;
     while(!gameOver){
@@ -92,13 +75,15 @@ int main(){
         paintBoard(turn, board, pieces, tiles, pieceIcons);
         if(code == -2){
             gameOver = 1;
-            printf("*Checkmate*\n%s wins\n", players[1-turn]);   
+            printf("*CHECKMATE*\n%s wins\n", players[1-turn]);   
         }else if(code == -1){
             printf("%s is in check\n", players[turn]);
-        }
+        }else if(code == -3)
+            gameOver = 1;
+            printf("*STALEMATE*\n%s cannot move but is not in check", players[turn])
     }
     
-    //TODO detect stalemate?
+    
 }
 
 /* Determine, based on the type and color of piece on the square 
@@ -149,21 +134,21 @@ char toUpper(char c){
     return c;
 }
 
-int selfCheck(int pieces[8][8][2], int i, int j, int x, int y, short color){
+int selfCheck(int pieces[8][8][2], int i, int j, int x, int y){
     // make a copy of the pieces data so we don't fuck with the original
+    int color = pieces[i][j][1];
+    
     int temp[8][8][2], a, b, c;
     for(a = 0; a < 8; a++)
         for(b = 0; b < 8; b++)   
             for(c = 0; c < 2; c++)
                 temp[a][b][c] = pieces[a][b][c];
                 
-            
     // move the piece 
     temp[x][y][0] = temp[i][j][0];
     temp[x][y][1] = temp[i][j][1];
     temp[i][j][0] = 0;
     temp[i][j][1] = 0;
-    
     
     
     // see if it puts the king in check 
@@ -173,17 +158,16 @@ int selfCheck(int pieces[8][8][2], int i, int j, int x, int y, short color){
     for(a = 0; a < 8; a++){
         for(b = 0; b < 8; b++){
             if(temp[a][b][0] != 0 && temp[a][b][1] != color){
-                printf("%d %d",temp[a][b][0],temp[a][b][1]);
+                //printf("%d %d",temp[a][b][0],temp[a][b][1]);
                 int moves[32][2];
                 moves[0][0] = -1;
-                getValidMoves(moves, temp, 1 - color, a, b);
+                getValidMoves(moves, temp, a, b);
                 c = 0;
                 while(moves[c][0] != -1){
                     addToValidMoves(validMoves, moves[c][0], moves[c][1]);
                     c++;
                 }
-                
-                printf("\n");
+                //printf("\n");
             }
         }
     }
@@ -202,13 +186,13 @@ int selfCheck(int pieces[8][8][2], int i, int j, int x, int y, short color){
         if(found)
             break;
     }
-    printf("king: %d %d",a,b);
+    //printf("king: %d %d",a,b);
     
     // see if any of the opposing piece's possible moves are the
     // player's king's location
-    printf("opposing moves:\n");
+    //printf("opposing moves:\n"); //debug
     while(validMoves[c][0] != -1){
-        printf("(%d %d) ", validMoves[c][0], validMoves[c][1]);
+        //printf("(%d %d) ", validMoves[c][0], validMoves[c][1]); //debug
         if(validMoves[c][0] == a && validMoves[c][1] == b)
             return 1; //king in check
         c++;
@@ -222,8 +206,8 @@ int selfCheck(int pieces[8][8][2], int i, int j, int x, int y, short color){
  * Finds all valid spots to move for a given piece
  * Stores locati8ons in validMoves, an array of integer pairs
  */
-void getValidMoves(int validMoves[][2], int pieces[8][8][2], short color, int i, int j){
-
+void getValidMoves(int validMoves[][2], int pieces[8][8][2], int i, int j){
+    int color = pieces[i][j][1];
     int x, y;
     validMoves[0][0] = -1;
     if(pieces[i][j][0] == 1){ // pawn
@@ -398,12 +382,15 @@ void addToValidMoves(int validMoves[][2], int i, int j){
  * return -1 for check
  * return -2 for checkmate
  */
-int checkForCheckmate(int validMoves[][2], int pieces[8][8][2], int x, int y, short color){
+int checkForCheckmate(int validMoves[][2], int pieces[8][8][2], int x, int y){
 
+    getValidMoves(validMoves, pieces, x, y); //load attacker's valid moves
+    int color = pieces[x][y][1]; //specify attacker's color
+    int i, j, a, b, n, found; //declare needed counter/flag variables
+    
     // find other player's king
-    int i, j, found;
     found = 0;
-    for(i = 0; i < 8; i++){
+    for(i = 0; i < 8; i++){ // iterate the board
         for(j = 0; j < 8; j++){
             if(pieces[i][j][0] == 6 && pieces[i][j][1] != color){
                 found = 1;
@@ -411,30 +398,47 @@ int checkForCheckmate(int validMoves[][2], int pieces[8][8][2], int x, int y, sh
             }
         }
         if(found)
-            break;
-    }
+            break;    
+    }   
+    
     // ASSERT (i,j) is location of opponent's king
     
+    int inCheck = 1;
+    int canMove = 0;
+    // is opponent king in check?
     if(!inValidMoves(validMoves, i, j)) // opponent not in check
-        return 0;
+        inCheck = 0;
+
+    // ASSERT opponent is in check
     
-    // ASSERT opponenet is in check
-    //TODO check for checkmate
+    // opponent can block?
+    // any opponent piece has a valid move that takes the
+    // king out of check.
     
-    //TODO opponent can block?
-    // attacking piece is rook, bishop, or queen and
-    // for any tile in between the attacking piece and the king,
-    // an opponent piece can move there
-    //TODO opponent can capture?
-    // one of opponent's piece's valid moves contains attacker's location
-    //TODO opponent can move? 
-    // opponent's king's valid moves are all contained in player's
-    // valid move set across all their pieces
+    for(a = 0; a < 8; a++)
+        for(b = 0; b < 8; b++) // iterate whole board for opposing pieces
+            if(pieces[a][b][1] != color && pieces[a][b][0] != 0){ // opposing piece
+                int moves[32][2]; // piece's potential moves
+                moves[0][0] = -1; 
+                //printf("(%d %d)", a, b);
+                getValidMoves(moves, pieces, a, b);
+                n = 0;
+                
+                while(moves[n][0] != -1){
+                    //printf("(%d %d to %d %d)", a, b, moves[n][0], moves[n][1]);
+                    if(!selfCheck(pieces, a, b, moves[n][0], moves[n][1]))
+                        canMove = 1; //opponent can move  
+                    n++; 
+                }
+            } 
     
-     
-     
-    // ASSERT opponent in check, but not checkmate 
-    return -1;
+    if(inCheck && !canMove)
+        return -2;
+    else if(inCheck && canMove)
+        return -1;
+    else if(!inCheck && !canMove)
+        return -3;
+    return 0;
 }
 
 /* returns positive integer if error occurs;
@@ -449,18 +453,18 @@ int checkForCheckmate(int validMoves[][2], int pieces[8][8][2], int x, int y, sh
 int move(char moveCmd[], int pieces[8][8][2], short color){
     /* parse out initial location */
     int j = toUpper(moveCmd[0]);
-    if(j == 0){
+    if(j == 0)
         return 4;
-    }
+        
     j -= 65;
     int i = atoi(&moveCmd[1]);
-    if(i == 0){
+    if(i == 0)
         return 4;
-    }    
+    
     i = 8 - i;
-    if(i < 0 || j < 0 || i > 7 || j > 7){
+    if(i < 0 || j < 0 || i > 7 || j > 7)
         return 4;
-    }
+    
     
     /* parse out future location */
     int y = toUpper(moveCmd[2]);
@@ -483,37 +487,34 @@ int move(char moveCmd[], int pieces[8][8][2], short color){
         return 2;
         
     /* check that the player isn't putting themself in check */
-    if(selfCheck(pieces, i, j, x, y, color))
+    if(selfCheck(pieces, i, j, x, y))
         return 6;
     
     /* get valid moves, store them in buffer */
     int validMoves[64][2];
     validMoves[0][0] = -1;
-    getValidMoves(validMoves, pieces, color, i, j);
+    getValidMoves(validMoves, pieces, i, j);
     
     /* Debugging: print out all possible spaces that the piece could have gone */
-    int k = 0; 
+    /*int k = 0; 
     while(validMoves[k][0] != -1){
         printf("%c%d ", validMoves[k][1] + 65, 8 - validMoves[k][0]);
         k++;
     }
     printf("\n");
-    
+    */
     if(inValidMoves(validMoves, x, y)){
         /* actually move the piece in memory */
         pieces[x][y][0] = pieces[i][j][0];
         pieces[x][y][1] = pieces[i][j][1];
         pieces[i][j][0] = 0;
         pieces[i][j][1] = 0;
-        getValidMoves(validMoves, pieces, color, x, y);
-        return checkForCheckmate(validMoves, pieces, color, i, j);
+        return checkForCheckmate(validMoves, pieces, x, y);
     }
     
     return 3;
-    //TODO detect putting yourself in check (in getValidMoves)
-    //TODO detect checkmate
     
     //TODO pawn replacement on back row
-    //TODO castling (keep a flag for if either color has already castled..)
+    //TODO castling (keep a flag for if either king has already moved..)
     //TODO en passant?
 }
