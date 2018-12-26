@@ -5,7 +5,6 @@
 #define BLACK 0
 #define WHITE 1
 
-
 int main(){
     short board[8][8];
     char *(tiles[2]) = {"\e[100m", "\e[107m"};
@@ -78,12 +77,11 @@ int main(){
             printf("*CHECKMATE*\n%s wins\n", players[1-turn]);   
         }else if(code == -1){
             printf("%s is in check\n", players[turn]);
-        }else if(code == -3)
+        }else if(code == -3){
             gameOver = 1;
-            printf("*STALEMATE*\n%s cannot move but is not in check", players[turn])
+            printf("*STALEMATE*\n(%s cannot move but is not in check)", players[turn]);
+        }
     }
-    
-    
 }
 
 /* Determine, based on the type and color of piece on the square 
@@ -199,12 +197,11 @@ int selfCheck(int pieces[8][8][2], int i, int j, int x, int y){
     }
     
     return 0; //king not in check
-    
 }
 
 /*
  * Finds all valid spots to move for a given piece
- * Stores locati8ons in validMoves, an array of integer pairs
+ * Stores locations in validMoves, an array of integer pairs
  */
 void getValidMoves(int validMoves[][2], int pieces[8][8][2], int i, int j){
     int color = pieces[i][j][1];
@@ -382,11 +379,11 @@ void addToValidMoves(int validMoves[][2], int i, int j){
  * return -1 for check
  * return -2 for checkmate
  */
-int checkForCheckmate(int validMoves[][2], int pieces[8][8][2], int x, int y){
+int checkForCheckmate(int validMoves[][2], int pieces[8][8][2], int color){
 
-    getValidMoves(validMoves, pieces, x, y); //load attacker's valid moves
-    int color = pieces[x][y][1]; //specify attacker's color
     int i, j, a, b, n, found; //declare needed counter/flag variables
+    int inCheck = 1;
+    int canMove = 0;
     
     // find other player's king
     found = 0;
@@ -401,18 +398,20 @@ int checkForCheckmate(int validMoves[][2], int pieces[8][8][2], int x, int y){
             break;    
     }   
     
-    // ASSERT (i,j) is location of opponent's king
-    
-    int inCheck = 1;
-    int canMove = 0;
-    // is opponent king in check?
-    if(!inValidMoves(validMoves, i, j)) // opponent not in check
-        inCheck = 0;
-
-    // ASSERT opponent is in check
-    
+    // see if any opposing pieces put the king in check
+    for(a = 0; a < 8; a++)
+        for(b = 0; b < 8; b++){
+            if(pieces[a][b][1] == color){
+                getValidMoves(validMoves, pieces, a, b); //attacker's valid moves
+                if(inValidMoves(validMoves, i, j)){
+                    inCheck = 1;
+                    break;
+                }
+            }
+        }
+                     
     // opponent can block?
-    // any opponent piece has a valid move that takes the
+    // any opponent piece has a valid move that takes their
     // king out of check.
     
     for(a = 0; a < 8; a++)
@@ -509,12 +508,27 @@ int move(char moveCmd[], int pieces[8][8][2], short color){
         pieces[x][y][1] = pieces[i][j][1];
         pieces[i][j][0] = 0;
         pieces[i][j][1] = 0;
-        return checkForCheckmate(validMoves, pieces, x, y);
+        
+        //
+        if(pieces[x][y][0] == 1 && (x == 0 || x == 7)){
+            int pieceCode;
+            while(1){
+                printf("which piece would you like to promote to?\n"
+                       "1 - pawn\n2 - bishop\n3 - knight\n4 - rook\n5 - queen\n");    
+                scanf("%d", &pieceCode);
+                if(pieceCode > 5 || pieceCode < 0){
+                    printf("invalid entry\n");
+                    continue;
+                }
+                break;
+            }
+            pieces[x][y][0] = pieceCode;
+        }
+        return checkForCheckmate(validMoves, pieces, color);
     }
     
     return 3;
     
-    //TODO pawn replacement on back row
     //TODO castling (keep a flag for if either king has already moved..)
     //TODO en passant?
 }
