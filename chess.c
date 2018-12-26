@@ -73,11 +73,12 @@ int main(){
     int turn = 1;
     int gameOver = 0;
     char players[2][6] = {"Black", "White"};
-    char errorMsg[5][40] = {"No piece at start location",
+    char errorMsg[6][40] = {"No piece at start location",
                             "Piece not owned by player",
                             "End location not in piece's range",
                             "Invalid start location",
-                            "Invalid end location"};
+                            "Invalid end location",
+                            "Cannot put yourself in check"};
     char cmd[100];
     int code;
     while(!gameOver){
@@ -168,24 +169,25 @@ int selfCheck(int pieces[8][8][2], int i, int j, int x, int y, short color){
     // see if it puts the king in check 
     // first get all possible moves for all opposing pieces 
     int validMoves[64][2];
+    validMoves[0][0] = -1;
     for(a = 0; a < 8; a++){
         for(b = 0; b < 8; b++){
             if(temp[a][b][0] != 0 && temp[a][b][1] != color){
                 printf("%d %d",temp[a][b][0],temp[a][b][1]);
-                /*int moves[32][2];
-                getValidMoves(moves, temp, color, a, b);
+                int moves[32][2];
+                moves[0][0] = -1;
+                getValidMoves(moves, temp, 1 - color, a, b);
                 c = 0;
                 while(moves[c][0] != -1){
                     addToValidMoves(validMoves, moves[c][0], moves[c][1]);
                     c++;
                 }
-                */
+                
                 printf("\n");
             }
         }
     }
-    return 0;
-    /*
+    
     c = 0;
     
     //locate player's king
@@ -200,18 +202,20 @@ int selfCheck(int pieces[8][8][2], int i, int j, int x, int y, short color){
         if(found)
             break;
     }
-    printf("3");
+    printf("king: %d %d",a,b);
+    
     // see if any of the opposing piece's possible moves are the
     // player's king's location
+    printf("opposing moves:\n");
     while(validMoves[c][0] != -1){
+        printf("(%d %d) ", validMoves[c][0], validMoves[c][1]);
         if(validMoves[c][0] == a && validMoves[c][1] == b)
             return 1; //king in check
         c++;
     }
     
-    printf("4");
     return 0; //king not in check
-    */
+    
 }
 
 /*
@@ -221,63 +225,53 @@ int selfCheck(int pieces[8][8][2], int i, int j, int x, int y, short color){
 void getValidMoves(int validMoves[][2], int pieces[8][8][2], short color, int i, int j){
 
     int x, y;
-    
-    if(pieces[i][j][0] == 0){ // empty space
-        validMoves[0][0] = -1;
-    } else if(pieces[i][j][0] == 1){ // pawn
+    validMoves[0][0] = -1;
+    if(pieces[i][j][0] == 1){ // pawn
         // pawn logic
         if(color){ // white pawn
             // white pawn is not on left edge or row 8
             // and can take piece to front left             
             if(j > 0 && i > 0 && pieces[i-1][j-1][1] != color 
-                     && pieces[i-1][j-1][0] != 0
-                     && !selfCheck(pieces,i,j,i-1,j-1,color)){
+                     && pieces[i-1][j-1][0] != 0){
                 addToValidMoves(validMoves, i-1, j-1);
             }
             // white pawn is not on right edge or row 8
             // and can take piece to front right
             if(j < 7 && i > 0 && pieces[i-1][j+1][1] != color 
-                     && pieces[i-1][j+1][0] != 0
-                     && !selfCheck(pieces,i,j,i-1,j+1,color)){
+                     && pieces[i-1][j+1][0] != 0){
                 addToValidMoves(validMoves, i-1, j+1);
             }
             // white pawn is not on row 8
             // and has empty spot in front of it
-            if(i > 0 && pieces[i-1][j][0] == 0
-                    && !selfCheck(pieces,i,j,i-1,j,color)){
+            if(i > 0 && pieces[i-1][j][0] == 0){
                 addToValidMoves(validMoves, i-1, j);
             }
             // white pawn is on home row
             // and has no pieces 1 or 2 tiles in front of it
-            if(i == 6 && pieces[i-1][j][0] == 0 && pieces[i-2][j][0] == 0
-                    && !selfCheck(pieces,i,j,i-2,j,color)){
+            if(i == 6 && pieces[i-1][j][0] == 0 && pieces[i-2][j][0] == 0){
                 addToValidMoves(validMoves, i-2, j);
             }
         }else{ //black pawn
             // black pawn is not on left edge or row 1
             // and can take piece to front left             
             if(j > 0 && i < 7 && pieces[i+1][j-1][1] != color 
-                     && pieces[i+1][j-1][0] != 0
-                     && !selfCheck(pieces,i,j,i+1,j-1,color)){
+                     && pieces[i+1][j-1][0] != 0){
                 addToValidMoves(validMoves, i+1, j-1);
             }
             // black pawn is not on right edge or row 1
             // and can take piece to front right
             if(j < 7 && i < 7 && pieces[i+1][j+1][1] != color 
-                     && pieces[i+1][j+1][0] != 0
-                     && !selfCheck(pieces,i,j,i+1,j+1,color)){
+                     && pieces[i+1][j+1][0] != 0){
                 addToValidMoves(validMoves, i+1, j+1);
             }
             // black pawn is not on row 1
             // and has empty spot in front of it
-            if(i < 7 && pieces[i+1][j][0] == 0
-                    && !selfCheck(pieces,i,j,i+1,j,color)){
+            if(i < 7 && pieces[i+1][j][0] == 0){
                 addToValidMoves(validMoves, i+1, j);
             }
             // black pawn is on home row
             // and has no pieces 1 or 2 tiles in front of it
-            if(i == 1 && pieces[i+1][j][0] == 0 && pieces[i+2][j][0] == 0
-                    && !selfCheck(pieces,i,j,i+2,j,color)){
+            if(i == 1 && pieces[i+1][j][0] == 0 && pieces[i+2][j][0] == 0){
                 addToValidMoves(validMoves, i+2, j);
             }
         } 
@@ -289,15 +283,13 @@ void getValidMoves(int validMoves[][2], int pieces[8][8][2], short color, int i,
                 x = i + xInc;
                 y = j + yInc;
                 while(x <= 7 && x >= 0 && y <= 7 && y >= 0
-                             && pieces[x][y][0] == 0){
-                    if(!selfCheck(pieces,i,j,x,y,color))    
-                        addToValidMoves(validMoves, x, y);
+                             && pieces[x][y][0] == 0){    
+                    addToValidMoves(validMoves, x, y);
                     x += xInc;
                     y += yInc;
                 }
                 if(x <= 7 && x >= 0 && y <= 7 && y >= 0
-                             && pieces[x][y][1] != color
-                             && !selfCheck(pieces,i,j,x,y,color)){
+                             && pieces[x][y][1] != color){
                     addToValidMoves(validMoves, x, y);
                 }
             }    
@@ -316,8 +308,7 @@ void getValidMoves(int validMoves[][2], int pieces[8][8][2], short color, int i,
                 
                 if(x <= 7 && x >= 0 && y <= 7 && y >= 0
                              && (pieces[x][y][0] == 0
-                             || pieces[x][y][1] != color)
-                             && !selfCheck(pieces,i,j,x,y,color)){
+                             || pieces[x][y][1] != color)){
                     addToValidMoves(validMoves, x, y);
                 }
             }
@@ -332,14 +323,12 @@ void getValidMoves(int validMoves[][2], int pieces[8][8][2], short color, int i,
                 y = j + yInc;
                 while(x <= 7 && x >= 0 && y <= 7 && y >= 0
                              && pieces[x][y][0] == 0){
-                    if(!selfCheck(pieces,i,j,x,y,color))
-                        addToValidMoves(validMoves, x, y);
+                    addToValidMoves(validMoves, x, y);
                     x += xInc;
                     y += yInc;
                 }
                 if(x <= 7 && x >= 0 && y <= 7 && y >= 0
-                             && pieces[x][y][1] != color
-                             && !selfCheck(pieces,i,j,x,y,color)){
+                             && pieces[x][y][1] != color){
                     addToValidMoves(validMoves, x, y);
                 }
             }
@@ -354,14 +343,12 @@ void getValidMoves(int validMoves[][2], int pieces[8][8][2], short color, int i,
                 y = j + yInc;
                 while(x <= 7 && x >= 0 && y <= 7 && y >= 0
                              && pieces[x][y][0] == 0){
-                    if(!selfCheck(pieces,i,j,x,y,color))
-                        addToValidMoves(validMoves, x, y);
+                    addToValidMoves(validMoves, x, y);
                     x += xInc;
                     y += yInc;
                 }
                 if(x <= 7 && x >= 0 && y <= 7 && y >= 0
-                             && pieces[x][y][1] != color
-                             && !selfCheck(pieces,i,j,x,y,color)){
+                             && pieces[x][y][1] != color){
                     addToValidMoves(validMoves, x, y);
                 }
             }
@@ -371,8 +358,7 @@ void getValidMoves(int validMoves[][2], int pieces[8][8][2], short color, int i,
             for(y = j - 1; y <= j + 1; y++){
                 if(x < 0 || y < 0 || x > 7 || y > 7)
                     continue;
-                if((pieces[x][y][0] == 0 || pieces[x][y][1] != color)
-                        && !selfCheck(pieces,i,j,x,y,color)){
+                if((pieces[x][y][0] == 0 || pieces[x][y][1] != color)){
                     addToValidMoves(validMoves, x, y);
                 }
             }
@@ -449,7 +435,6 @@ int checkForCheckmate(int validMoves[][2], int pieces[8][8][2], int x, int y, sh
      
     // ASSERT opponent in check, but not checkmate 
     return -1;
-
 }
 
 /* returns positive integer if error occurs;
@@ -496,6 +481,10 @@ int move(char moveCmd[], int pieces[8][8][2], short color){
     /* check that piece belongs to the player */
     if(pieces[i][j][1]  != color)
         return 2;
+        
+    /* check that the player isn't putting themself in check */
+    if(selfCheck(pieces, i, j, x, y, color))
+        return 6;
     
     /* get valid moves, store them in buffer */
     int validMoves[64][2];
